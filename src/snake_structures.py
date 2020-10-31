@@ -3,15 +3,26 @@ from typing import List
 
 
 class GridPosition:
-    def __init__(self, x, y):
+    def __init__(self, x, y, name=None):
         self.x = x
         self.y = y
+        self.name = name
+
+    # def __add__(self, other):
+    #     if isinstance(other, list) or isinstance(other, GridPosition):
+    #         self.x += other[0]
+    #         self.y += other[1]
+    #     return self
 
     def __add__(self, other):
+        return self.add_direction(other)
+
+    def add_direction(self, other):
         if isinstance(other, list) or isinstance(other, GridPosition):
-            self.x += other[0]
-            self.y += other[1]
-        return self
+            x = self.x + other[0]
+            y = self.y + other[1]
+            return GridPosition(x, y)
+        raise NotImplementedError
 
     def __getitem__(self, item):
         if item == 0:
@@ -24,6 +35,14 @@ class GridPosition:
         if isinstance(other, GridPosition):
             return self.x == other.x and self.y == other.y
         return False
+
+    def __repr__(self):
+        s = f"Position({self.x}, {self.y})"
+        s += f" [{self.name}]" if self.name is not None else ""
+        return s
+
+    def __str__(self):
+        return self.__repr__()
 
     def copy(self):
         return GridPosition(self.x, self.y)
@@ -42,6 +61,33 @@ class GridPosition:
         return temp_pos
 
 
+class Direction:
+    # UP = [0, -1]
+    # RIGHT = [1, 0]
+    # DOWN = [0, 1]
+    # LEFT = [-1, 0]
+    # STRAIGHT = [0, 0]
+
+    UP = GridPosition(0, -1)
+    RIGHT = GridPosition(1, 0)
+    DOWN = GridPosition(0, 1)
+    LEFT = GridPosition(-1, 0)
+    STRAIGHT = GridPosition(0, 0)
+
+    @staticmethod
+    def name_of(direction):
+        res = "None"
+        if direction == Direction.UP:
+            res = "UP"
+        if direction == Direction.LEFT:
+            res = "LEFT"
+        if direction == Direction.RIGHT:
+            res = "RIGHT"
+        if direction == Direction.DOWN:
+            res = "DOWN"
+        return res
+
+
 class GameState:
     """
     snake_head_direction è codificata come una lista di direzioni da sommare alle posizioni.
@@ -51,10 +97,10 @@ class GameState:
     [-1, 0] => LEFT
 
     """
-    game_width = 30
-    game_height = 30
+    game_width = 10
+    game_height = 10
 
-    min_snake_body_length = 5
+    min_snake_body_length = 4
 
     expected_number_of_apples = 1
     apples_positions: List[GridPosition] = []
@@ -62,14 +108,19 @@ class GameState:
     snake_start_pos_x = game_width // 2 - 1
     snake_start_pos_y = game_height // 2 - 1
 
+    food_start_pos_x = (game_width // 2 - 1) + 2
+    food_start_pos_y = (game_height // 2 - 1) + 2
+
     snake_head_position: GridPosition = GridPosition(snake_start_pos_x, snake_start_pos_y)
-    candidate_snake_head_direction = [1, 0]
-    snake_head_direction = [1, 0]
+    candidate_snake_head_direction = Direction.RIGHT
+    snake_head_direction = Direction.RIGHT
     snake_body: List[GridPosition] = [GridPosition(snake_start_pos_x, snake_start_pos_y)]
 
     score = 0
 
     difficulty_level = 1
+
+    last_move_categorical = None
 
     @staticmethod
     def is_collided(position: GridPosition):
@@ -86,7 +137,7 @@ class GameState:
 
     @staticmethod
     def get_closest_food_direction():
-        n_foods = len(g.apples_positions)
+        n_foods = len(GameState.apples_positions)
         if n_foods > 1:
             import warnings
             warnings.warn('Multiple food found during search for closest food direction. Using the first food only')
@@ -104,8 +155,8 @@ class GameState:
         x-, y+     up-left
         x-, y-     down-left
         """
-        curr_pos = g.snake_head_position
-        food = g.apples_positions[0]
+        curr_pos = GameState.snake_head_position
+        food = GameState.apples_positions[0]
 
         is_food_left = food.x < curr_pos.x
         is_food_right = food.x > curr_pos.x
@@ -113,10 +164,3 @@ class GameState:
         is_food_down = food.y > curr_pos.y
 
         return is_food_up, is_food_right, is_food_down, is_food_left
-
-
-class Direction:
-    UP = [0, -1]
-    RIGHT = [1, 0]
-    DOWN = [0, 1]
-    LEFT = [-1, 0]

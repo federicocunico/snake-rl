@@ -5,15 +5,28 @@
 
 import pygame
 import sys
+import argparse
 
-from src.snake_structures import GameState
+from src.snake_structures import GameState, Direction
 from reinforcement_learning.snake_agent import epochs
-from src.snake_logic import GameLogic
+from src.snake_logic import GameLogic, direction_sum
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test", type=bool)
+    args = parser.parse_args()
+
+    return not args.test
+
+
+is_train = get_args()
 
 pygame.init()
 pygame.font.init()
 font_size = 30
-text_font = pygame.font.SysFont('Comic Sans MS', font_size)
+# text_font = pygame.font.SysFont('Comic Sans MS', font_size)
+text_font = pygame.font.SysFont('Raleway', font_size)
 
 size = width, height = 800, 800
 speed = [0.25, 0.25]
@@ -31,14 +44,15 @@ clock = pygame.time.Clock()
 base_offset = 15
 grid_rect_size = 20
 
-game_logic = GameLogic(train_agent=True).start()
+text_rendering_row_counter = 0
+texts = []
+
+game_logic = GameLogic(train_agent=is_train)
+game_logic.start()
 
 
 def start_game_loop():
-    counter = 0
-
-    while counter <= epochs:
-
+    while True:
         # events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -47,18 +61,23 @@ def start_game_loop():
             if event.type == pygame.KEYDOWN:
                 temp_next_direction = None
                 if event.key == pygame.K_UP:
-                    temp_next_direction = [0, -1]
+                    # temp_next_direction = [0, -1]
+                    temp_next_direction = Direction.UP
                 if event.key == pygame.K_DOWN:
-                    temp_next_direction = [0, 1]
+                    # temp_next_direction = [0, 1]
+                    temp_next_direction = Direction.DOWN
                 if event.key == pygame.K_RIGHT:
-                    temp_next_direction = [1, 0]
+                    # temp_next_direction = [1, 0]
+                    temp_next_direction = Direction.RIGHT
                 if event.key == pygame.K_LEFT:
-                    temp_next_direction = [-1, 0]
-                if temp_next_direction is not None and direction_sum(temp_next_direction,
-                                                                     GameState.snake_head_direction) != [0, 0]:
+                    # temp_next_direction = [-1, 0]
+                    temp_next_direction = Direction.LEFT
+                if temp_next_direction is not None \
+                        and direction_sum(temp_next_direction, GameState.snake_head_direction) != [0, 0]:
                     GameState.candidate_snake_head_direction = temp_next_direction
                 if event.key == pygame.K_q:
                     # pygame.display.quit()
+                    game_logic.stop()
                     pygame.quit()
                     sys.exit()
 
@@ -67,17 +86,38 @@ def start_game_loop():
         print_grid()
         render_game()
 
-        textsurface = text_font.render(f'Score: {GameState.score}', False, (173, 12, 51))
-        screen.blit(textsurface, ((GameState.game_width * grid_rect_size) + base_offset + 10, 0))
-        textsurface = text_font.render(f'Level:  {GameState.difficulty_level}', False, (173, 12, 51))
-        screen.blit(textsurface, ((GameState.game_width * grid_rect_size) + base_offset + 10, font_size))
+        add_text('===========')
+        add_text('Snake AI')
+        add_text('---------------')
+        add_text(f'Score: {GameState.score}')
+        add_text(f'Level:  {GameState.difficulty_level}')
+        if is_train:
+            add_text('---------------')
+            add_text(f'Round:  {game_logic.counter}/{epochs}')
+            add_text(f'Top Score:  {max(game_logic.scores) if len(game_logic.scores) > 0 else 0}')
+            add_text('---------------')
+            add_text("")
+            if game_logic.counter >= epochs:
+                txt = f'Done Training!'
+            else:
+                txt = "Training..."
+            add_text(txt)
+        add_text('===========')
+        render_text()
 
         pygame.display.flip()
         clock.tick(60)
 
 
-def direction_sum(dir1, dir2):
-    return [dir1[0] + dir2[0], dir1[1] + dir2[1]]
+def render_text():
+    for i, s in enumerate(texts):
+        screen.blit(s, ((GameState.game_width * grid_rect_size) + base_offset + 10, i * font_size))
+    texts.clear()
+
+
+def add_text(txt):
+    textsurface = text_font.render(txt, False, (173, 12, 51))
+    texts.append(textsurface)
 
 
 def render_game():

@@ -122,7 +122,7 @@ def render_game():
 def print_grid():
     for i in range(GameState.game_width):
         for j in range(GameState.game_height):
-            r = pygame.draw.rect(
+            pygame.draw.rect(
                 screen,
                 gray,
                 [
@@ -133,7 +133,6 @@ def print_grid():
                 ],
                 1
             )
-            # print(r)
 
 
 if __name__ == "__main__":
